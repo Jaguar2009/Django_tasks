@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Лівий Sidebar для додавання друзів -->
+        <div class="col-md-3 bg-secondary text-white d-flex flex-column align-items-start p-3"
+             style="width: 250px; height: calc(100vh - 80px); overflow-y: auto; position: fixed; top: 80px; left: 0; z-index: 100;">
+            <h5 class="mb-4">Додати друга за номером телефону або Email</h5>
+
+            <form method="GET" action="{% url 'friends_list' %}">
+                <div class="form-group">
+                    <label for="search" class="form-label">Пошук друзів</label>
+                    <input type="text" id="search" name="search" class="form-control" value="{{ search_query }}"
+                           placeholder="Пошук..." style="border-radius: 25px; padding: 10px;">
+                </div>
+                <button type="submit" class="btn w-100 mt-3"
+                        style="background-color: #28a745; border-color: #28a745; color: white; border-radius: 20px;">
+                    Шукати
+                </button>
+            </form>
+
+            <!-- Форма додавання друзів -->
+            <form method="post" style="width: 100%;">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="identifier" class="form-label">Номер телефону або Email:</label>
+                    <input type="text" id="identifier" name="identifier" class="form-control"
+                           placeholder="Введіть номер або Email" style="border-radius: 25px; padding: 10px;">
+                </div>
+                <button type="submit" class="btn w-100 mt-3"
+                        style="background-color: #28a745; border-color: #28a745; color: white; border-radius: 20px;">
+                    Додати друга
+                </button>
+            </form>
+
+            <!-- Новий розділ для надісланих запрошень -->
+            <h5 class="mt-4">Надіслані запрошення</h5>
+            {% if sent_requests %}
+                <ul class="list-group">
+                    {% for request in sent_requests %}
+                        <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ request.to_user.first_name }} {{ request.to_user.last_name }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Ви ще не надіслали жодних запрошень.</p>
+            {% endif %}
+        </div>
+
+        <!-- Основний контент: Відображення друзів -->
+        <div class="col-md-9 offset-md-3 p-5" style="margin-left: 165px;">
+            <h1>Мої друзі</h1>
+            <!-- Список друзів -->
+            {% if friends %}
+                <div class="row">
+                    {% for friend in friends %}
+                        <div class="col-md-4 mb-4">  <!-- Залишаємо три картки в ряд -->
+                            <div class="card h-100 d-flex flex-column">  <!-- Додаємо клас d-flex для вертикального вирівнювання -->
+                                {% if friend.avatar %}
+                                    <img src="{{ friend.avatar.url }}" class="card-img-top" alt="{{ friend.first_name }} {{ friend.last_name }}">
+                                {% else %}
+                                    <img src="https://st5.depositphotos.com/35914836/63548/i/450/depositphotos_635487238-stock-photo-abstract-background-neon-light-motion.jpg" class="card-img-top" alt="Аватар за замовчуванням">
+                                {% endif %}
+                                <div class="card-body d-flex flex-column flex-grow-1"> <!-- Додаємо flex-grow-1 для заповнення простору -->
+                                    <h5 class="card-title">{{ friend.first_name }} {{ friend.last_name }}</h5>
+                                    <p class="card-text"><strong>Email:</strong> {{ friend.email }}</p>
+                                    <p class="card-text"><strong>Телефон:</strong> {{ friend.phone_number }}</p>
+                                    <p class="card-text"><strong>Країна:</strong> {{ friend.country }}</p>
+                                </div>
+
+                                <!-- Кнопка видалення друга закріплена до нижньої частини картки -->
+                                <button type="button" class="btn btn-danger mt-auto" data-bs-toggle="modal" data-bs-target="#deleteFriendModal{{ friend.id }}">
+                                    Видалити друга
+                                </button>
+
+                                <!-- Модальне вікно для підтвердження видалення -->
+                                <div class="modal fade" id="deleteFriendModal{{ friend.id }}" tabindex="-1" aria-labelledby="deleteFriendModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteFriendModalLabel">Підтвердження видалення</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Ви впевнені, що хочете видалити {{ friend.first_name }} {{ friend.last_name }} зі списку друзів?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <form action="{% url 'delete_friend' friend.id %}" method="post">
+                                                    {% csrf_token %}
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                                    <button type="submit" class="btn btn-danger">Видалити</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>У вас поки що немає друзів.</p>
+            {% endif %}
+        </div>
+
+        <!-- Правий Sidebar: Запити на дружбу -->
+        <div class="col-md-3 bg-secondary text-white d-flex flex-column align-items-start p-3"
+             style="width: 250px; height: calc(100vh - 80px); overflow-y: auto; position: fixed; top: 80px; right: 0; z-index: 100;">
+            <h5 class="mb-4">Запити на дружбу</h5>
+
+            <!-- Відображення запитів на дружбу -->
+            {% if friend_requests %}
+                <div class="list-group">
+                    {% for request in friend_requests %}
+                        <div class="list-group-item bg-dark text-white mb-3" style="border-radius: 10px;">
+                            <p><strong>{{ request.from_user.first_name }} {{ request.from_user.last_name }}</strong> надіслав(-ла) запит на дружбу.</p>
+                            <form method="post" action="{% url 'confirm_friend_request' request.id %}" class="d-inline-block">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" class="btn btn-success btn-sm">Прийняти</button>
+                            </form>
+                            <form method="post" action="{% url 'confirm_friend_request' request.id %}" class="d-inline-block">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="btn btn-danger btn-sm">Відхилити</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>У вас поки що немає запитів на дружбу.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
