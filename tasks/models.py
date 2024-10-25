@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, phone_number, country, password=None, **extra_fields):
         if not email:
@@ -23,6 +24,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Суперкористувач повинен мати is_superuser=True.')
 
         return self.create_user(email, first_name, last_name, phone_number, country, password, **extra_fields)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
@@ -58,6 +60,7 @@ class Project(models.Model):
     def __str__(self):
         return self.title
 
+
 class FriendRequest(models.Model):
     from_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sent_friend_requests', on_delete=models.CASCADE)
     to_user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='received_friend_requests', on_delete=models.CASCADE)
@@ -85,16 +88,25 @@ class Task(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     image = models.ImageField(upload_to='task_images/', null=True, blank=True)
-
     # Поле для терміновості
     urgency_status = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='normal', null=True, blank=True)
-
     # Поле для статусу виконання
     work_status = models.CharField(max_length=20, choices=WORK_STATUS_CHOICES, default='free', null=True, blank=True)
-
     due_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
     assigned_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.title
+
+
+class Comment(models.Model):
+    content = models.TextField()  # Вміст коментаря
+    created_at = models.DateTimeField(auto_now_add=True)  # Дата створення
+    likes = models.IntegerField(default=0, unique=('comment', 'user'))  # Кількість лайків
+    task = models.ForeignKey(Task, related_name='comments', on_delete=models.CASCADE)  # Посилання на завдання
+    user = models.ForeignKey(CustomUser, related_name='comments', on_delete=models.CASCADE)  # Користувач, який залишив коментар
+
+    def __str__(self):
+        return f'Comment by {self.user} on {self.task}'

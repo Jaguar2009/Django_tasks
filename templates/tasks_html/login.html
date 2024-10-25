@@ -13,14 +13,33 @@
             <h2 class="text-center">Логін</h2>
             <form method="POST" class="mt-4">
                 {% csrf_token %}
+
+                <div class="text-danger text-center">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                </div>
+
                 <div class="form-group mb-3">
                     <label>Електронна пошта:</label>
-                    <input type="email" class="form-control" name="email" required>
+                    <input type="email" class="form-control" name="email" required value="{{ form.email.value|default:'' }}">
+                    <div class="text-danger text-center">
+                        {% for error in form.email.errors %}
+                            {{ error }}<br>
+                        {% endfor %}
+                    </div>
                 </div>
+
                 <div class="form-group mb-3">
                     <label>Пароль:</label>
                     <input type="password" class="form-control" name="password" required>
+                    <div class="text-danger text-center">
+                        {% for error in form.password.errors %}
+                            {{ error }}<br>
+                        {% endfor %}
+                    </div>
                 </div>
+
                 <div class="text-center">
                     <button type="submit" class="btn btn-primary">Увійти</button>
                 </div>

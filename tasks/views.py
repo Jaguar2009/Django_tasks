@@ -1,18 +1,24 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Q
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.db.models import Q
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.dateparse import parse_date
 from django.views import View
-from .forms import CustomUserLoginForm, ProfileEditForm, RegistrationForm, ProjectForm, ProjectEditForm, AddFriendForm, \
-    TaskForm
-from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView
-from .models import Project, CustomUser, FriendRequest, Task
-from collections import defaultdict
+from .forms import CustomUserLoginForm, ProfileEditForm, RegistrationForm, ProjectForm, ProjectEditForm, AddFriendForm, TaskForm, CommentForm
+from .models import Project, CustomUser, FriendRequest, Task, Comment
 from django.utils import timezone
+
+
+
+@login_required(login_url='/login/')
+def about(request):
+    return render(request, 'tasks_html/about.html')
+
+def usage_agreement(request):
+    return render(request, 'tasks_html/usage_agreement.html')
 
 
 class ProjectListView(LoginRequiredMixin, ListView):
@@ -23,32 +29,29 @@ class ProjectListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        # Отримуємо всі проекти користувача
         projects = Project.objects.filter(
             Q(owner=self.request.user) |
             Q(users=self.request.user) |
             Q(admins=self.request.user)
         ).distinct().order_by('-created_at')
 
-        # Отримуємо всі завдання користувача
         user_tasks = Task.objects.filter(assigned_user=self.request.user)
 
-        # Пошукові параметри
         query = self.request.GET.get('search')
-        due_date_from = self.request.GET.get('due_date_from')
-        due_date_to = self.request.GET.get('due_date_to')
-
-        # Статуси терміновості та виконання
-        urgency_status = self.request.GET.getlist('urgency_status')
-        work_status = self.request.GET.getlist('work_status')
-
-        # Фільтрація по назві та опису
         if query:
             user_tasks = user_tasks.filter(
                 Q(title__icontains=query) | Q(description__icontains=query)
             )
 
-        # Фільтрація по датах
+        user_tasks = self.filter_by_date(user_tasks)
+        user_tasks = self.filter_by_status(user_tasks)
+
+        return projects, user_tasks
+
+    def filter_by_date(self, user_tasks):
+        due_date_from = self.request.GET.get('due_date_from')
+        due_date_to = self.request.GET.get('due_date_to')
+
         if due_date_from:
             due_date_from_parsed = parse_date(due_date_from)
             if due_date_from_parsed:
@@ -59,15 +62,19 @@ class ProjectListView(LoginRequiredMixin, ListView):
             if due_date_to_parsed:
                 user_tasks = user_tasks.filter(due_date__lte=due_date_to_parsed)
 
-        # Фільтрація по статусу терміновості
+        return user_tasks
+
+    def filter_by_status(self, user_tasks):
+        urgency_status = self.request.GET.getlist('urgency_status')
+        work_status = self.request.GET.getlist('work_status')
+
         if urgency_status:
             user_tasks = user_tasks.filter(urgency_status__in=urgency_status)
 
-        # Фільтрація по статусу виконання
         if work_status:
             user_tasks = user_tasks.filter(work_status__in=work_status)
 
-        return projects, user_tasks
+        return user_tasks
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -88,17 +95,23 @@ def register(request):
         form = RegistrationForm()
     return render(request, 'tasks_html/register.html', {'form': form})
 
+
 def user_login(request):
     if request.method == 'POST':
-        email = request.POST['email']
-        password = request.POST['password']
-        user = authenticate(request, email=email, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('home')  # Перенаправлення на домашню сторінку
-        else:
-            messages.error(request, 'Неправильний логін або пароль.')
-    return render(request, 'tasks_html/login.html')  # Переконайтеся, що у вас є login.html
+        form = CustomUserLoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
+            user = authenticate(request, email=email, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('home')  # Перенаправлення на домашню сторінку
+            else:
+                form.add_error(None, 'Неправильний логін або пароль.')
+    else:
+        form = CustomUserLoginForm()
+
+    return render(request, 'tasks_html/login.html', {'form': form})
 
 @login_required
 def edit_profile(request):
@@ -124,11 +137,9 @@ def user_profile(request):
 @login_required(login_url='/login/')
 def delete_profile(request):
     if request.method == 'POST':
-        user = request.user
-        user.delete()  # Видалення користувача
-        messages.success(request, "Ваш профіль було успішно видалено.")
-        return redirect('home')  # Перенаправлення на головну сторінку
-    return render(request, 'tasks_html/delete_profile.html')  # Відображення шаблону підтвердження
+        request.user.delete()  # Видалити користувача
+        return redirect('home')  # Перенаправити на головну сторінку після видалення
+    return redirect('user_profile')  # Відображення шаблону підтвердження
 
 @login_required(login_url='/login/')
 def user_logout(request):
@@ -155,7 +166,7 @@ def create_project(request):
     return render(request, 'tasks_html/create_project.html', {'form': form})
 
 
-class ProjectDetailView(View):
+class ProjectDetailView(LoginRequiredMixin, View):
     def get(self, request, pk):
         project = get_object_or_404(Project, pk=pk)
 
@@ -370,16 +381,17 @@ class ProjectDetailView(View):
         """
         now = timezone.now()
         total_time = task.due_date - now  # Загальний час до дедлайну
+        task_duration = task.due_date - task.created_at  # Припустимо, що у вас є поле created_at
 
-        # Перевірка, чи термін виконання менше або дорівнює 1 дню
+        # Логіка зміни статусу
         if task.work_status != 'completed':
             if task.work_status != 'on_inspection':
-                if total_time.total_seconds() <= 86400:  # 86400 секунд = 1 доба
+                if total_time.total_seconds() <= 97200:  # 86400 секунд = 1 доба
                     task.urgency_status = 'critical_urgent'
                 elif total_time.total_seconds() <= 0:
                     task.urgency_status = 'overdue'  # Якщо дедлайн пройшов
                 else:
-                    first_period = total_time / 3
+                    first_period = task_duration / 3
                     second_period = first_period * 2
                     time_left = task.due_date - now
 
@@ -392,8 +404,14 @@ class ProjectDetailView(View):
 
         task.save()
 
+
+@login_required(login_url='/login/')
 def project_edit(request, pk):
     project = get_object_or_404(Project, pk=pk)
+
+    if request.user != project.owner:
+        return redirect('home')
+
     if request.method == 'POST':
         form = ProjectEditForm(request.POST, request.FILES, instance=project)
         if form.is_valid():
@@ -405,8 +423,14 @@ def project_edit(request, pk):
     # Передача змінної 'project' до шаблону
     return render(request, 'tasks_html/project_edit.html', {'form': form, 'project': project})
 
+
+@login_required(login_url='/login/')
 def project_delete(request, pk):
     project = get_object_or_404(Project, pk=pk)
+
+    if request.user != project.owner:
+        return redirect('home')
+
     if request.method == 'POST':
         project.delete()
         return redirect('home')  # Редірект на головну сторінку після видалення
@@ -495,6 +519,7 @@ class FriendsView(LoginRequiredMixin, ListView):
         })
 
 
+@login_required(login_url='/login/')
 def delete_friend(request, friend_id):
     if request.method == "POST":
         friend = get_object_or_404(CustomUser, id=friend_id)
@@ -502,7 +527,7 @@ def delete_friend(request, friend_id):
         return redirect('friends_list')
 
 
-@login_required
+@login_required(login_url='/login/')
 def handle_friend_request(request, request_id):
     # Шукаємо запит на дружбу
     friend_request = get_object_or_404(FriendRequest, id=request_id)
@@ -533,8 +558,12 @@ def handle_friend_request(request, request_id):
     return redirect('friends_list')
 
 
+@login_required(login_url='/login/')
 def create_task(request, project_id):
     project = get_object_or_404(Project, id=project_id)
+
+    if request.user in project.users.all():
+        return redirect('home')
 
     if request.method == 'POST':
         form = TaskForm(request.POST, request.FILES)
@@ -549,9 +578,14 @@ def create_task(request, project_id):
     return render(request, 'tasks_html/create_task.html', {'form': form, 'project': project})
 
 
-class EditTaskView(View):
+class EditTaskView(LoginRequiredMixin, View):
     def get(self, request, pk):
+
         task = get_object_or_404(Task, pk=pk)
+
+        if request.user in task.project.users.all():
+            return redirect('home')
+
         form = TaskForm(instance=task)  # Заповнюємо форму даними існуючого завдання
         context = {
             'form': form,
@@ -575,19 +609,67 @@ class EditTaskView(View):
         }
         return render(request, 'tasks_html/edit_task.html', context)
 
+
+@login_required(login_url='/login/')
 def task_detail(request, task_id):
     task = get_object_or_404(Task, id=task_id)
 
     if request.method == "POST":
-        # Призначити завдання користувачу, якщо воно ще не призначене
-        if task.assigned_user is None:
+        # Обробка взяття завдання
+        if 'task_id' in request.POST:
             task.assigned_user = request.user
             task.work_status = 'in_process'
             task.save()
-            return redirect('task_detail', task_id=task.id)  # Повернутися на сторінку деталей завдання
+            return redirect('task_detail', task_id=task.id)
 
-    return render(request, 'tasks_html/task_detail.html', {'task': task})
+        # Видалення коментаря
+        if 'delete_comment_id' in request.POST:
+            comment_id = request.POST.get('delete_comment_id')
+            comment = get_object_or_404(Comment, id=comment_id)
 
+            # Перевіряємо, чи користувач є автором коментаря
+            if comment.user == request.user:
+                comment.delete()
+                return redirect('task_detail', task_id=task.id)
+
+        # Лайк коментаря
+        if 'like_comment_id' in request.POST:
+            comment_id = request.POST.get('like_comment_id')
+            comment = get_object_or_404(Comment, id=comment_id)
+
+            # Лайкаємо тільки чужі коментарі
+            if comment.user != request.user:
+                if comment.likes < 1:  # Якщо лайків ще не було
+                    comment.likes += 1
+                else:  # Якщо лайк вже існує, видаляємо
+                    comment.likes -= 1
+
+                comment.save()
+                return redirect('task_detail', task_id=task.id)
+
+        # Додавання нового коментаря
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.task = task
+            comment.user = request.user  # Встановлюємо поточного користувача як автора
+            comment.created_at = timezone.now()
+            comment.save()
+            return redirect('task_detail', task_id=task.id)
+    else:
+        form = CommentForm()
+
+    # Отримуємо коментарі, пов'язані із завданням
+    comments = Comment.objects.filter(task=task).order_by('-created_at')
+
+    return render(request, 'tasks_html/task_detail.html', {
+        'task': task,
+        'comments': comments,
+        'form': form  # Передаємо форму в шаблон
+    })
+
+
+@login_required(login_url='/login/')
 def cancel_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
 
@@ -599,3 +681,4 @@ def cancel_task(request, task_id):
         return redirect('project_detail', pk=task.project.id)  # Перенаправлення на деталі проекту
 
     return redirect('task_detail', task_id=task.id)
+

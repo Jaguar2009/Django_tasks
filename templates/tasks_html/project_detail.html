@@ -26,13 +26,14 @@
                     <p class="text-dark">{{ project.description }}</p>
 
                     <!-- Кнопки "Редагувати" та "Видалити" -->
-                    <div class="d-flex justify-content-between">
-                        <!-- Кнопка "Редагувати" -->
-                        <a href="{% url 'project_edit' pk=project.id %}" class="btn btn-primary">Редагувати</a>
-                        <a href="{% url 'create_task' project.id %}" class="btn btn-success">Створити</a>
-                        <!-- Кнопка "Видалити" -->
-                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">Видалити</button>
-                    </div>
+                    {% if request.user == project.owner %}
+                        <div class="d-flex justify-content-start" style="margin-left: -13px;">
+                            <a href="{% url 'project_edit' pk=project.id %}" class="btn btn-primary btn-sm">Редагувати</a>
+                            <a href="{% url 'create_task' project.id %}" class="btn btn-success btn-sm">Створити</a>
+                            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">Видалити</button>
+                        </div>
+                    {% endif %}
+
 
                     <!-- Дата створення -->
                     <div class="mt-2 p-2 d-flex justify-content-center" style="background-color: #f8f9fa;">
@@ -45,13 +46,14 @@
             <div class="card w-100 mb-3">
                 <h5 class="card-header text-dark d-flex justify-content-between align-items-center">
                     Адміністратори
-                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addAdminModal" aria-label="Додати адміністратора" style="border: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
-                            <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
-                            <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"></path>
-                        </svg>
-                        <span class="visually-hidden">Додати адміністратора</span>
-                    </button>
+                    {% if request.user in project.admins.all or request.user == project.owner %}
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addAdminModal" aria-label="Додати адміністратора" style="border: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
+                                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
+                                <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"></path>
+                            </svg>
+                        </button>
+                    {% endif %}
                 </h5>
 
                 <ul class="list-group list-group-flush">
@@ -59,7 +61,9 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             {{ admin.first_name }} {{ admin.last_name }}
                             {% if admin != project.owner %}
-                                <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAdminModal-{{ admin.id }}">Видалити</button>
+                                {% if request.user in project.admins.all or request.user == project.owner %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAdminModal-{{ admin.id }}">Видалити</button>
+                                {% endif %}
                             {% endif %}
                         </li>
                     {% endfor %}
@@ -70,17 +74,28 @@
             <div class="card w-100 mb-3">
                 <h5 class="card-header text-dark d-flex justify-content-between align-items-center">
                     Учасники
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">Додати користувача</button>
+                    {% if request.user in project.admins.all or request.user == project.owner %}
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addUserModal" aria-label="Додати адміністратора" style="border: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
+                                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
+                                <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"></path>
+                            </svg>
+                        </button>
+                    {% endif %}
                 </h5>
                 <ul class="list-group list-group-flush">
                     {% for participant in participants %}
-                        {% if participant != project.owner %}
+                        {% for participant in project.users.all %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 {{ participant.first_name }} {{ participant.last_name }}
                                 <!-- Кнопка для видалення учасника -->
-                                <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ participant.id }}">Видалити</button>
+                                {% if request.user == participant %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ participant.id }}">Видалити</button>
+                                {% elif request.user in project.admins.all or request.user == project.owner %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ participant.id }}">Видалити</button>
+                                {% endif %}
                             </li>
-                        {% endif %}
+                        {% endfor %}
                     {% empty %}
                         <li class="list-group-item">Немає учасників</li>
                     {% endfor %}
@@ -104,35 +119,42 @@
                                 <div class="card-body">
                                     <h5 class="card-title">{{ task.title }}</h5>
                                     <p class="card-text">Термін: {{ task.due_date|date:"d.m.Y" }}</p>
-                                    {% if task.urgency_status == "normal" %}
-                                        <span class="badge bg-success">Звичайне</span>
-                                    {% elif task.urgency_status == "urgent" %}
-                                        <span class="badge bg-warning text-dark">Терміново</span>
-                                    {% elif task.urgency_status == "critical_urgent" %}
-                                        <span class="badge bg-danger">Критично терміново</span>
-                                    {% elif task.urgency_status == "overdue" %}
-                                        <span class="badge bg-secondary">Просрочене</span>
-                                    {% endif %}
 
-                                        <!-- Відображення статусу виконання завдання -->
-                                    {% if task.work_status == "in_process" %}
-                                        <span class="badge bg-primary">В процесі</span>
-                                    {% elif task.work_status == "on_inspection" %}
-                                        <span class="badge bg-info text-dark">На перевірці</span>
-                                    {% elif task.work_status == "completed" %}
-                                        <span class="badge bg-success">Виконано</span>
-                                    {% elif task.work_status == "postponed" %}
-                                        <span class="badge bg-warning text-dark">Відкладено</span>
-                                    {% elif task.work_status == "free" %}
-                                        <span class="badge bg-warning text-dark">Вільно</span>
+                                    <!-- Відображення статусу терміновості та виконання в один рядок -->
+                                    <div class="d-flex justify-content-center align-items-center mb-3" style="gap: 10px;">
+                                        {% if task.urgency_status == "normal" %}
+                                            <span class="badge bg-success">Звичайне</span>
+                                        {% elif task.urgency_status == "urgent" %}
+                                            <span class="badge bg-warning text-dark">Терміново</span>
+                                        {% elif task.urgency_status == "critical_urgent" %}
+                                            <span class="badge bg-danger">Критично терміново</span>
+                                        {% elif task.urgency_status == "overdue" %}
+                                            <span class="badge bg-secondary">Просрочене</span>
+                                        {% endif %}
+
+                                        {% if task.work_status == "in_process" %}
+                                            <span class="badge bg-primary">В процесі</span>
+                                        {% elif task.work_status == "on_inspection" %}
+                                            <span class="badge bg-info text-dark">На перевірці</span>
+                                        {% elif task.work_status == "completed" %}
+                                            <span class="badge bg-success">Виконано</span>
+                                        {% elif task.work_status == "postponed" %}
+                                            <span class="badge bg-warning text-dark">Відкладено</span>
+                                        {% elif task.work_status == "free" %}
+                                            <span class="badge bg-warning text-dark">Вільно</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Кнопки редагувати і видалити -->
+                                    {% if request.user in project.admins.all or request.user == project.owner %}
+                                        <div class="d-flex justify-content-center mt-3" style="gap: 10px;">
+                                            <a href="{% url 'edit_task' task.id %}" class="btn btn-primary">Редагувати</a>
+                                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTaskModal-{{ task.id }}">Видалити</button>
+                                        </div>
                                     {% endif %}
                                 </div>
                                 <div class="card-footer text-center">
-                                    <a href="{% url 'edit_task' task.id %}" class="btn btn-primary">Редагувати</a>
                                     <a href="{% url 'task_detail' task.id %}" class="btn btn-info">Детальніше</a>
-                                    <!-- Кнопка для видалення -->
-                                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTaskModal-{{ task.id }}">Видалити</button>
-
                                 </div>
                             </div>
                         </div>

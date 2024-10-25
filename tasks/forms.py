@@ -1,27 +1,32 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
-from .models import CustomUser, Project, Task
+from .models import CustomUser, Project, Task, Comment
+import os
+import random
+from django.conf import settings
 
 
-class CustomUserLoginForm(UserCreationForm):
-    avatar = forms.ImageField(required=False)  # Додано поле для аватару
-
-    class Meta(UserCreationForm.Meta):
-        model = CustomUser
-        fields = ('email', 'first_name', 'last_name', 'phone_number', 'country', 'avatar', 'password')
-        error_messages = {
-            'email': {
-                'required': 'Це поле є обов\'язковим',
-            },
-            'password': {
-                'required': 'Це поле є обов\'язковим',
-            },
-        }
+class CustomUserLoginForm(forms.Form):
+    email = forms.EmailField(required=True, error_messages={
+        'required': 'Це поле є обов\'язковим.',
+    })
+    password = forms.CharField(widget=forms.PasswordInput, required=True, error_messages={
+        'required': 'Це поле є обов\'язковим.',
+    })
 
 
 class ProfileEditForm(forms.ModelForm):
+    country = forms.ChoiceField(
+        choices=[
+            ('Ukraine', 'Україна'),
+            ('USA', 'США'),
+        ],
+        required=True,
+        error_messages={
+            'required': 'Це поле є обов\'язковим.',
+        }
+    )
     class Meta:
         model = CustomUser
         fields = ['email', 'first_name', 'last_name', 'phone_number', 'country', 'avatar']
@@ -50,22 +55,44 @@ class ProfileEditForm(forms.ModelForm):
         self.fields['email'].required = True
         self.fields['phone_number'].required = True
         self.fields['country'].required = True
-        self.fields['last_name'].required = False
+        self.fields['last_name'].required = True
         self.fields['avatar'].required = False
 
 
 class RegistrationForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, required=True)
-    confirm_password = forms.CharField(widget=forms.PasswordInput, required=True)
-    COUNTRIES = [
-        ('Ukraine', 'Україна'),
-        ('USA', 'США'),
-    ]
-    country = forms.ChoiceField(choices=COUNTRIES)
+    country = forms.ChoiceField(
+        choices=[
+            ('Ukraine', 'Україна'),
+            ('USA', 'США'),
+        ],
+        required=True,
+        error_messages={
+            'required': 'Це поле є обов\'язковим.',
+        }
+    )
+
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        required=True,
+        min_length=8,
+        error_messages={
+            'required': 'Це поле є обов\'язковим.',
+            'min_length': 'Пароль повинен містити щонайменше 8 символів.'
+        }
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput,
+        required=True,
+        error_messages={
+            'required': 'Це поле є обов\'язковим.'
+        }
+    )
+
+    agree_to_terms = forms.BooleanField(required=True, label='Угода про користування', error_messages={'required': 'Ця угода є обов\'язковою.'})
 
     class Meta:
         model = CustomUser
-        fields = ['first_name', 'last_name', 'email', 'country', 'phone_number', 'password']
+        fields = ['first_name', 'last_name', 'email', 'country', 'phone_number']
         error_messages = {
             'first_name': {
                 'required': 'Це поле є обов\'язковим',
@@ -76,14 +103,18 @@ class RegistrationForm(forms.ModelForm):
             'email': {
                 'required': 'Це поле є обов\'язковим',
             },
-            'country': {
-                'required': 'Це поле є обов\'язковим',
-            },
-            'password': {
-                'required': 'Це поле є обов\'язковим',
-            },
-
         }
+
+    def clean_confirm_password(self):
+        password = self.cleaned_data.get("password")
+        confirm_password = self.cleaned_data.get("confirm_password")
+        if len(confirm_password) < 8:
+            raise ValidationError("Підтвердження пароля повинно містити щонайменше 8 символів.")  # Помилка, якщо символів менше
+
+        if password != confirm_password:
+            raise ValidationError("Паролі не збігаються.")  # Помилка, якщо паролі не збігають
+
+        return confirm_password
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get("phone_number")
@@ -118,9 +149,16 @@ class RegistrationForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.password = make_password(self.cleaned_data["password"])
+        avatars_path = os.path.join(settings.MEDIA_ROOT, 'avatars_registration')
+        avatar_files = os.listdir(avatars_path)
+        random_avatar = random.choice(avatar_files)
+
+        # Додайте аватар користувачу
+        user.avatar = f'avatars_registration/{random_avatar}'
         if commit:
             user.save()
         return user
+
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -152,6 +190,7 @@ class ProjectEditForm(forms.ModelForm):
             },
         }
 
+
 class AddFriendForm(forms.Form):
     identifier = forms.CharField(
         max_length=255,  # Максимальна довжина повинна підходити як для телефону, так і для email
@@ -159,7 +198,17 @@ class AddFriendForm(forms.Form):
         widget=forms.TextInput(attrs={'placeholder': 'Введіть номер телефону або Email'})
     )
 
+
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
         fields = ['title', 'description', 'image', 'work_status', 'urgency_status', 'due_date']
+
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }

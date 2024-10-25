@@ -124,6 +124,20 @@
                 </div>
             </div>
 
+            <div class="col-12">
+              <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="agreeToTerms" name="agree_to_terms" required>
+                  <label class="form-check-label" for="agreeToTerms">
+                      Я погоджуюсь з <a href="/usage_agreement">угодою про користування</a>
+                  </label>
+                  <div class="text-danger">
+                      {% for error in form.agree_to_terms.errors %}
+                          {{ error }}<br>
+                      {% endfor %}
+                  </div>
+              </div>
+          </div>
+
             <!-- Кнопка реєстрації -->
             <div class="col-12">
               <button class="w-100 btn btn-primary btn-lg" type="submit">Зареєструватися</button>
@@ -137,3 +151,15 @@
 </div>
 </body>
 </html>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(event) {
+        const agreeToTerms = document.getElementById('agreeToTerms');
+        if (!agreeToTerms.checked) {
+            event.preventDefault(); // Зупинити відправку форми
+            agreeToTerms.classList.add('is-invalid'); // Додати клас для підсвічування
+        } else {
+            agreeToTerms.classList.remove('is-invalid'); // Видалити клас, якщо чекбокс позначений
+        }
+    });
+</script>
