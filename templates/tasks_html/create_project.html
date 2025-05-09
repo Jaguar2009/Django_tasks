@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Створення проекту</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .form-control {
+      border-radius: 25px; /* Зробити поля овальними */
+    }
+    .btn-create {
+      background-color: #28a745; /* Зелений колір для кнопки */
+      border-color: #28a745; /* Колір кордону кнопки */
+      transition: background-color 0.3s ease; /* Плавний перехід кольору фону */
+    }
+    .btn-create:hover {
+      background-color: #218838; /* Темніший зелений колір при наведенні */
+      border-color: #1e7e34; /* Темніший колір кордону при наведенні */
+      opacity: 1; /* Уникнути прозорості при наведенні */
+    }
+    .text-danger {
+      font-size: 0.875rem; /* Зменшити розмір тексту для помилок */
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <main>
+    <div class="py-5 text-center">
+      <h2>Створення нового проекту</h2>
+      <p class="lead">Заповніть форму для створення нового проекту</p>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-8">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="{{ form.title.id_for_label }}" class="form-label">Назва проекту</label>
+            <input type="text" name="title" id="{{ form.title.id_for_label }}" class="form-control" placeholder="Введіть назву проекту" value="{{ form.title.value|default:'' }}">
+            <div class="text-danger">
+              {{ form.title.errors }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.description.id_for_label }}" class="form-label">Опис проекту</label>
+            <textarea name="description" id="{{ form.description.id_for_label }}" class="form-control" placeholder="Введіть опис проекту">{{ form.description.value|default:'' }}</textarea>
+            <div class="text-danger">
+              {{ form.description.errors }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.image.id_for_label }}" class="form-label">Зображення проекту (опціонально)</label>
+            <input type="file" name="image" id="{{ form.image.id_for_label }}" class="form-control">
+            <small class="form-text text-muted">Ви можете створити проект без зображення.</small> <!-- Підказка для користувача -->
+            <div class="text-danger">
+              {{ form.image.errors }}
+            </div>
+          </div>
+
+          <button type="submit" class="w-100 btn btn-create btn-lg">Створити проект</button>
+          <a href="{% url 'home' %}" class="w-100 btn btn-secondary btn-lg mt-2">Скасувати</a> <!-- Замість 'home' використайте правильне ім'я URL -->
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

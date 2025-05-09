@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Редагування завдання
+{% endblock %}
+
+{% block body %}
+<style>
+    .form-control {
+        border-radius: 25px; /* Зробити поля овальними */
+    }
+    .btn-update {
+        background-color: #28a745; /* Зелений колір для кнопки */
+        border-color: #28a745; /* Колір кордону кнопки */
+        transition: background-color 0.3s ease; /* Плавний перехід кольору фону */
+    }
+    .btn-update:hover {
+        background-color: #218838; /* Темніший зелений колір при наведенні */
+        border-color: #1e7e34; /* Темніший колір кордону при наведенні */
+        opacity: 1; /* Уникнути прозорості при наведенні */
+    }
+    .text-danger {
+        font-size: 0.875rem; /* Зменшити розмір тексту для помилок */
+    }
+</style>
+
+<div class="container">
+    <main>
+        <div class="py-5 text-center">
+            <h2>Редагування завдання: {{ task.title }}</h2>
+            <p class="lead">Оновіть інформацію про завдання.</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-8">
+                <form id="taskForm" method="POST" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Назва завдання</label>
+                        <input type="text" name="title" id="title" class="form-control" value="{{ task.title }}" required>
+                        <div class="text-danger">
+                            {{ form.title.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Опис завдання</label>
+                        <textarea name="description" id="description" class="form-control" required>{{ task.description }}</textarea>
+                        <div class="text-danger">
+                            {{ form.description.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="urgency_status" class="form-label">Терміновість завдання</label>
+                        <select name="urgency_status" id="urgency_status" class="form-select" required>
+                            <option value="" disabled>Оберіть терміновість</option>
+                            <option value="normal" {% if task.urgency_status == 'normal' %}selected{% endif %}>Звичайне</option>
+                            <option value="urgent" {% if task.urgency_status == 'urgent' %}selected{% endif %}>Терміново</option>
+                            <option value="critical_urgent" {% if task.urgency_status == 'critical_urgent' %}selected{% endif %}>Критично терміново</option>
+                            <option value="overdue" {% if task.urgency_status == 'overdue' %}selected{% endif %}>Просрочене</option>
+                        </select>
+                        <div class="text-danger">
+                            {{ form.urgency_status.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="work_status" class="form-label">Статус виконання завдання</label>
+                        <select name="work_status" id="work_status" class="form-select" required>
+                            <option value="" disabled>Оберіть статус виконання</option>
+                            <option value="in_process" {% if task.work_status == 'in_process' %}selected{% endif %}>В процесі</option>
+                            <option value="on_inspection" {% if task.work_status == 'on_inspection' %}selected{% endif %}>На перевірці</option>
+                            <option value="completed" {% if task.work_status == 'completed' %}selected{% endif %}>Виконано</option>
+                            <option value="postponed" {% if task.work_status == 'postponed' %}selected{% endif %}>Відкладено</option>
+                            <option value="free" {% if task.work_status == 'free' %}selected{% endif %}>Вільно</option>
+                        </select>
+                        <div class="text-danger">
+                            {{ form.work_status.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Термін виконання</label>
+                        <input type="date" name="due_date" id="due_date" class="form-control" value="{{ task.due_date|date:'Y-m-d' }}" required>
+                        <div class="text-danger">
+                            {{ form.due_date.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Зображення завдання (опціонально)</label>
+                        <input type="file" name="image" id="image" class="form-control">
+                        <small class="form-text text-muted">Ви можете оновити завдання без зображення.</small>
+                        <div class="text-danger">
+                            {{ form.image.errors }}
+                        </div>
+                    </div>
+
+                    <button type="button" class="w-100 btn btn-update btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal">Оновити завдання</button>
+                    <a href="{% url 'project_detail' task.project.id %}" class="w-100 btn btn-secondary btn-lg mt-2">Скасувати</a>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Модальне вікно підтвердження -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Підтвердження збереження</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Ви впевнені, що хочете зберегти зміни?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-update" id="confirmSave">Підтвердити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('confirmSave').addEventListener('click', function () {
+        document.getElementById('taskForm').submit();
+    });
+</script>
+
+{% endblock %}

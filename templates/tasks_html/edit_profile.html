@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Редагування профілю
+{% endblock %}
+
+{% block body %}
+<div class="container">
+  <main>
+    <div class="py-5 text-center">
+      <h2>Редагування профілю</h2>
+      <p class="lead">Заповніть форму для оновлення інформації про ваш профіль</p>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-8">
+        <form id="editProfileForm" method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+
+            <!-- Ім'я -->
+            <div class="col-sm-6">
+              <label class="form-label">Ім'я</label>
+              <input type="text" name="first_name" class="form-control" placeholder="Введіть ваше ім'я" value="{{ form.first_name.value|default:'' }}">
+              <div class="text-danger">
+                {% for error in form.first_name.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Прізвище -->
+            <div class="col-sm-6">
+              <label class="form-label">Прізвище</label>
+              <input type="text" name="last_name" class="form-control" placeholder="Введіть ваше прізвище" value="{{ form.last_name.value|default:'' }}">
+              <div class="text-danger">
+                {% for error in form.last_name.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Пошта -->
+            <div class="col-12">
+              <label class="form-label">Пошта</label>
+              <input type="email" name="email" class="form-control" placeholder="Введіть вашу пошту" value="{{ form.email.value|default:'' }}">
+              <div class="text-danger">
+                {% for error in form.email.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Номер телефону -->
+            <div class="col-12">
+              <label class="form-label">Номер телефону</label>
+              <input type="text" name="phone_number" class="form-control" placeholder="Введіть номер телефону" value="{{ form.phone_number.value|default:'' }}">
+              <div class="text-danger">
+                {% for error in form.phone_number.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Країна -->
+            <div class="col-12">
+              <label class="form-label">Країна</label>
+              <select name="country" class="form-control">
+                <option value="">Оберіть країну</option>
+                {% for country in form.country.field.choices %}
+                  <option value="{{ country.0 }}" {% if country.0 == form.country.value %}selected{% endif %}>{{ country.1 }}</option>
+                {% endfor %}
+              </select>
+              <div class="text-danger">
+                {% for error in form.country.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Аватар -->
+            <div class="col-12">
+              <label class="form-label">Аватар</label>
+              <input type="file" name="avatar" class="form-control">
+              <div class="text-danger">
+                {% for error in form.avatar.errors %}
+                  {{ error }}<br>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="col-12">
+              <button type="button" class="w-100 btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#confirmationModal">Зберегти</button>
+              <a href="{% url 'home' %}" class="w-100 btn btn-secondary btn-lg mt-2">Скасувати</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Модальне вікно підтвердження редагування -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmationModalLabel">Підтвердження редагування</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Ви впевнені, що хочете зберегти зміни у вашому профілі?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-primary" id="confirmEditButton">Зберегти зміни</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('confirmEditButton').addEventListener('click', function() {
+    document.getElementById('editProfileForm').submit();
+  });
+</script>
+
+{% endblock %}

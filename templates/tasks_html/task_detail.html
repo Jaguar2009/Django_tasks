@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Деталі завдання
+{% endblock %}
+
+{% block body %}
+<div class="container">
+        <div class="py-5 text-center">
+        <h2>Деталі завдання: {{ task.title }}</h2>
+            <h3>Таймер до прострочення:</h3>
+            <div id="countdown" class="h4"></div>
+    </div>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="task-details">
+                    {% if task.image %}
+                        <img src="{{ task.image.url }}" class="card-img-top" alt="{{ task.title }}">
+                    {% else %}
+                        <img src="https://st5.depositphotos.com/35914836/63548/i/450/depositphotos_635487238-stock-photo-abstract-background-neon-light-motion.jpg" class="card-img-top" alt="Зображення за замовчуванням">
+                    {% endif %}
+
+                    <h5>Опис завдання:</h5>
+                    <p>{{ task.description }}</p>
+
+                    <h5>Статус:</h5>
+                    <div class="d-flex mb-3">
+                        <div class="me-2">
+                            {% if task.urgency_status == "normal" %}
+                                <span class="badge bg-success">Звичайне</span>
+                            {% elif task.urgency_status == "urgent" %}
+                                <span class="badge bg-warning text-dark">Терміново</span>
+                            {% elif task.urgency_status == "critical_urgent" %}
+                                <span class="badge bg-danger">Критично терміново</span>
+                            {% elif task.urgency_status == "overdue" %}
+                                <span class="badge bg-secondary">Просрочене</span>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            {% if task.work_status == "in_process" %}
+                                <span class="badge bg-primary">В процесі</span>
+                            {% elif task.work_status == "on_inspection" %}
+                                <span class="badge bg-info">На перевірці</span>
+                            {% elif task.work_status == "completed" %}
+                                <span class="badge bg-success">Виконано</span>
+                            {% elif task.work_status == "postponed" %}
+                                <span class="badge bg-warning">Відкладено</span>
+                            {% elif task.work_status == "free" %}
+                                <span class="badge bg-success">Вільно</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <h5>Термін виконання:</h5>
+                    <p>{{ task.due_date|date:"d.m.Y" }}</p>
+
+                    <div class="text-center mt-4">
+                        <a href="{% url 'project_detail' task.project.id %}" class="btn btn-primary mt-2">Повернутися до проекту</a> <!-- Кнопка повернення -->
+
+                        <!-- Кнопка "Взяти завдання" -->
+                        {% if task.assigned_user == request.user %}
+                            <p class="text-success">Ви вже взяли це завдання!</p>
+                            {% if task.work_status != "on_inspection" %}
+                                <!-- Кнопка "Завершити завдання" -->
+                                <form method="post" action="{% url 'project_detail' task.project.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+                                    <button type="submit" name="complete_task" class="btn btn-success mt-2">Завершити завдання</button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'project_detail' task.project.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="task_id" value="{{ task.id }}">
+                                    <button type="submit" name="delete_complete_task" class="btn btn-success mt-2">Видалити запрос на перевірку завдання</button>
+                                </form>
+                            {% endif %}
+                            <button class="btn btn-danger mt-2" data-bs-toggle="modal" data-bs-target="#cancelTaskModal">Відмовитися від завдання</button>
+                        {% elif task.assigned_user %}
+                            <p class="text-danger">Завдання вже взято іншим користувачем!</p>
+                        {% elif request.user.is_authenticated %}
+                            <form method="POST" class="mt-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="task_id" value="{{ task.id }}">
+                                <button type="submit" class="btn btn-primary mt-2">Взяти завдання</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    <h2>Коментарі</h2>
+                    {% if comments %}
+                        <ul>
+                            {% for comment in comments %}
+                                <li>
+                                    <strong>{{ comment.user.first_name }} {{ comment.user.last_name }}</strong>:
+                                    {{ comment.content }}<br>
+                                    <small>Опубліковано: {{ comment.created_at }}</small><br>
+                                    <small>Вподобайки: {{ comment.likes }}</small>
+
+                                    <!-- Кнопка для лайка, якщо це не коментар поточного користувача -->
+                                    {% if comment.user != request.user %}
+                                        <form method="POST" style="display:inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="like_comment_id" value="{{ comment.id }}">
+                                            <label>
+                                                <input type="checkbox"
+                                                       name="like"
+                                                       onclick="this.form.submit();"
+                                                       {% if comment.likes > 0 %} checked {% endif %}>
+                                                Лайк
+                                            </label>
+                                        </form>
+                                    {% endif %}
+
+                                    <!-- Кнопка для видалення коментаря, якщо користувач є автором -->
+                                    {% if comment.user == request.user %}
+                                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ comment.id }}">
+                                            Видалити
+                                        </button>
+
+                                        <!-- Модальне вікно для підтвердження видалення коментаря -->
+                                        <div class="modal fade" id="deleteCommentModal{{ comment.id }}" data-bs-backdrop="static" tabindex="-1" aria-labelledby="deleteCommentModalLabel{{ comment.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteCommentModalLabel{{ comment.id }}">Confirm Comment Deletion</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Ви впевнені що хочете видалити цей коментар?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                                        <form method="POST" style="display:inline;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="delete_comment_id" value="{{ comment.id }}">
+                                                            <button type="submit" class="btn btn-danger">Видалити</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Додай перший коментар</p>
+                    {% endif %}
+
+                    <h3>Додати коментарі</h3>
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary">Додати коментар</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    <!-- Модальне вікно для підтвердження відмови від завдання -->
+    <div class="modal fade" id="cancelTaskModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="cancelTaskModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-dark" id="cancelTaskModalLabel">Підтвердження відмови від завдання</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-dark">
+                    Ви впевнені, що хочете відмовитися від завдання "{{ task.title }}"?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <form action="{% url 'cancel_task' task.id %}" method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Відмовитися</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // Отримайте дату терміну виконання завдання з серверу, використовуючи ISO-формат
+    let dueDate = new Date("{{ task.due_date|date:'c' }}").getTime();
+
+    // Додайте дві години, якщо потрібно врахувати різницю у часових поясах
+    dueDate += -3 * 60 * 60 * 1000; // Додаємо 2 години в мілісекундах
+
+    // Оновіть таймер кожну секунду
+    const countdownElement = document.getElementById("countdown");
+    const countdown = setInterval(() => {
+        const now = new Date().getTime();
+        const distance = dueDate - now;
+
+        // Розрахуйте час для днів, годин, хвилин та секунд
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // Виведіть результати в елемент таймера
+        countdownElement.innerHTML = `${days} днів ${hours} годин ${minutes} хвилин ${seconds} секунд`;
+
+        // Якщо зворотний відлік закінчився, відобразіть повідомлення
+        if (distance < 0) {
+            clearInterval(countdown);
+            countdownElement.innerHTML = "Час вичерпано!";
+        }
+    }, 1000);
+    </script>
+
+{% endblock %}

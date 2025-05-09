@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Деталі проекту
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Лівий Sidebar -->
+        <div class="col-md-3 bg-secondary text-white d-flex flex-column align-items-start p-3"
+             style="width: 300px; height: calc(100vh - 80px); overflow-y: auto; position: fixed; top: 80px; left: 0; z-index: 100;">
+            <h5 class="mb-4">Інформація про проект</h5>
+
+            <!-- Карточка з інформацією про проект -->
+            <div class="card w-100 mb-3">
+                {% if project.image %}  <!-- Перевірка на наявність зображення -->
+                    <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                {% else %}
+                    <img src="https://st5.depositphotos.com/35914836/63548/i/450/depositphotos_635487238-stock-photo-abstract-background-neon-light-motion.jpg" class="card-img-top" alt="Зображення за замовчуванням">  <!-- Шлях до зображення за замовчуванням -->
+                {% endif %}
+                <div class="card-body">
+                    <!-- Назва проекту -->
+                    <h5 class="card-title text-dark">{{ project.title }}</h5>
+                    <!-- Опис проекту -->
+                    <p class="text-dark">{{ project.description }}</p>
+
+                    <!-- Кнопки "Редагувати" та "Видалити" -->
+                    {% if request.user == project.owner %}
+                        <div class="d-flex justify-content-start" style="margin-left: -13px;">
+                            <a href="{% url 'project_edit' pk=project.id %}" class="btn btn-primary btn-sm">Редагувати</a>
+                            <a href="{% url 'create_task' project.id %}" class="btn btn-success btn-sm">Створити</a>
+                            <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">Видалити</button>
+                        </div>
+                    {% endif %}
+
+
+                    <!-- Дата створення -->
+                    <div class="mt-2 p-2 d-flex justify-content-center" style="background-color: #f8f9fa;">
+                        <p class="text-dark mb-0 text-center">{{ project.created_at|date:"d.m.Y" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карточка адміністраторів -->
+            <div class="card w-100 mb-3">
+                <h5 class="card-header text-dark d-flex justify-content-between align-items-center">
+                    Адміністратори
+                    {% if request.user in project.admins.all or request.user == project.owner %}
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addAdminModal" aria-label="Додати адміністратора" style="border: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
+                                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
+                                <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"></path>
+                            </svg>
+                        </button>
+                    {% endif %}
+                </h5>
+
+                <ul class="list-group list-group-flush">
+                    {% for admin in admins %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ admin.first_name }} {{ admin.last_name }}
+                            {% if admin != project.owner %}
+                                {% if request.user in project.admins.all or request.user == project.owner %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAdminModal-{{ admin.id }}">Видалити</button>
+                                {% endif %}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Карточка учасників -->
+            <div class="card w-100 mb-3">
+                <h5 class="card-header text-dark d-flex justify-content-between align-items-center">
+                    Учасники
+                    {% if request.user in project.admins.all or request.user == project.owner %}
+                        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addUserModal" aria-label="Додати адміністратора" style="border: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-add" viewBox="0 0 16 16">
+                                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
+                                <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"></path>
+                            </svg>
+                        </button>
+                    {% endif %}
+                </h5>
+                <ul class="list-group list-group-flush">
+                    {% for participant in participants %}
+                        {% for participant in project.users.all %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ participant.first_name }} {{ participant.last_name }}
+                                <!-- Кнопка для видалення учасника -->
+                                {% if request.user == participant %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ participant.id }}">Видалити</button>
+                                {% elif request.user in project.admins.all or request.user == project.owner %}
+                                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ participant.id }}">Видалити</button>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    {% empty %}
+                        <li class="list-group-item">Немає учасників</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Основний контент -->
+        <div class="col-md-9 offset-md-3 p-5" style="margin-left: 155px;">
+            <div class="col-md-15">
+                <h3>Список завдань</h3>
+                <div class="row">
+                    {% for task in tasks %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                {% if task.image %}
+                                    <img src="{{ task.image.url }}" class="card-img-top" alt="{{ task.title }}">
+                                {% else %}
+                                    <img src="https://st5.depositphotos.com/35914836/63548/i/450/depositphotos_635487238-stock-photo-abstract-background-neon-light-motion.jpg" class="card-img-top" alt="Зображення за замовчуванням">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ task.title }}</h5>
+                                    <p class="card-text">Термін: {{ task.due_date|date:"d.m.Y" }}</p>
+
+                                    <!-- Відображення статусу терміновості та виконання в один рядок -->
+                                    <div class="d-flex justify-content-center align-items-center mb-3" style="gap: 10px;">
+                                        {% if task.urgency_status == "normal" %}
+                                            <span class="badge bg-success">Звичайне</span>
+                                        {% elif task.urgency_status == "urgent" %}
+                                            <span class="badge bg-warning text-dark">Терміново</span>
+                                        {% elif task.urgency_status == "critical_urgent" %}
+                                            <span class="badge bg-danger">Критично терміново</span>
+                                        {% elif task.urgency_status == "overdue" %}
+                                            <span class="badge bg-secondary">Просрочене</span>
+                                        {% endif %}
+
+                                        {% if task.work_status == "in_process" %}
+                                            <span class="badge bg-primary">В процесі</span>
+                                        {% elif task.work_status == "on_inspection" %}
+                                            <span class="badge bg-info text-dark">На перевірці</span>
+                                        {% elif task.work_status == "completed" %}
+                                            <span class="badge bg-success">Виконано</span>
+                                        {% elif task.work_status == "postponed" %}
+                                            <span class="badge bg-warning text-dark">Відкладено</span>
+                                        {% elif task.work_status == "free" %}
+                                            <span class="badge bg-warning text-dark">Вільно</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Кнопки редагувати і видалити -->
+                                    {% if request.user in project.admins.all or request.user == project.owner %}
+                                        <div class="d-flex justify-content-center mt-3" style="gap: 10px;">
+                                            <a href="{% url 'edit_task' task.id %}" class="btn btn-primary">Редагувати</a>
+                                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTaskModal-{{ task.id }}">Видалити</button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-footer text-center">
+                                    <a href="{% url 'task_detail' task.id %}" class="btn btn-info">Детальніше</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>Завдань немає.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Правий Sidebar -->
+        <div class="col-md-3 bg-secondary text-white d-flex flex-column align-items-start p-3"
+             style="width: 300px; height: calc(100vh - 80px); overflow-y: auto; position: fixed; top: 80px; right: 0; z-index: 100;">
+            <h5 class="mb-4">Пошук завдань</h5>
+            <form method="GET" action="{% url 'project_detail' pk=project.id %}">
+                <!-- Поле для пошуку по назві та опису -->
+                <div class="form-group mb-3">
+                    <label for="search">Назва або опис</label>
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Введіть текст пошуку" value="{{ request.GET.search }}">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="due_date_from">Термін від</label>
+                    <input type="date" name="due_date_from" id="due_date_from" class="form-control">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="due_date_to">Термін до</label>
+                    <input type="date" name="due_date_to" id="due_date_to" class="form-control">
+                </div>
+
+                <!-- Accordion для статусу терміновості -->
+                <div class="accordion mb-3" id="urgencyAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingUrgency">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUrgency" aria-expanded="false" aria-controls="collapseUrgency">
+                                Терміновість
+                            </button>
+                        </h2>
+                        <div id="collapseUrgency" class="accordion-collapse collapse" aria-labelledby="headingUrgency" data-bs-parent="#urgencyAccordion">
+                            <div class="accordion-body">
+                                <div class="form-group">
+                                    <div>
+                                        <input type="checkbox" name="urgency_status" value="normal" id="urgency_normal">
+                                        <label for="urgency_normal" style="color: black;">Звичайне</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="urgency_status" value="urgent" id="urgency_urgent">
+                                        <label for="urgency_urgent" style="color: black;">Термінове</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="urgency_status" value="critical_urgent" id="urgency_critical_urgent">
+                                        <label for="urgency_critical_urgent" style="color: black;">Критично термінове</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="urgency_status" value="overdue" id="urgency_overdue">
+                                        <label for="urgency_overdue" style="color: black;">Просрочене</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion для статусу виконання -->
+                <div class="accordion mb-3" id="workStatusAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingWorkStatus">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWorkStatus" aria-expanded="false" aria-controls="collapseWorkStatus">
+                                Статус виконання
+                            </button>
+                        </h2>
+                        <div id="collapseWorkStatus" class="accordion-collapse collapse" aria-labelledby="headingWorkStatus" data-bs-parent="#workStatusAccordion">
+                            <div class="accordion-body">
+                                <div class="form-group">
+                                    <div>
+                                        <input type="checkbox" name="work_status" value="in_process" id="work_in_process">
+                                        <label for="work_in_process" style="color: black;">В процесі</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="work_status" value="on_inspection" id="work_on_inspection">
+                                        <label for="work_on_inspection" style="color: black;">На перевірці</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="work_status" value="completed" id="work_completed">
+                                        <label for="work_completed" style="color: black;">Виконано</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="work_status" value="postponed" id="work_postponed">
+                                        <label for="work_postponed" style="color: black;">Відкладено</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" name="work_status" value="free" id="work_free">
+                                        <label for="work_free" style="color: black;">Вільно</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопка для виконання пошуку -->
+                <button type="submit" class="btn btn-primary">Пошук</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Модальне вікно для підтвердження видалення -->
+<div class="modal fade" id="deleteModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-dark" id="deleteModalLabel">Підтвердження видалення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Ви впевнені, що хочете видалити проект "{{ project.title }}"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <form action="{% url 'project_delete' pk=project.id %}" method="POST" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Видалити</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Модальне вікно для додавання адміністратора -->
+<div class="modal fade" id="addAdminModal" tabindex="-1" aria-labelledby="addAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAdminModalLabel">Додати адміністратора</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addAdminForm" action="{% url 'project_detail' pk=project.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="admin_identifier" class="form-label">Електронна пошта або номер телефону</label>
+                        <input type="text" class="form-control" id="admin_identifier" name="admin_identifier">
+                    </div>
+                    <div class="mb-3">
+                        <label for="friends_admin">Друзі</label>
+                        <div id="friends_admin">
+                            {% for friend in request.user.friends.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="friends_admin" value="{{ friend.id }}" id="friend_admin_{{ friend.id }}">
+                                    <label class="form-check-label" for="friend_admin_{{ friend.id }}">
+                                        {{ friend.first_name }} {{ friend.last_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="submit" class="btn btn-primary" form="addAdminForm">Додати</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+{% for admin in admins %}
+<!-- Модальне вікно для підтвердження видалення адміністратора -->
+<div class="modal fade" id="deleteAdminModal-{{ admin.id }}" tabindex="-1" aria-labelledby="deleteAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-dark" id="deleteAdminModalLabel">Підтвердження видалення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Ви впевнені, що хочете видалити адміністратора "{{ admin.first_name }} {{ admin.last_name }}"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <form action="{% url 'project_detail' pk=project.id %}" method="POST" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="admin_id" value="{{ admin.id }}">
+                        <button type="submit" class="btn btn-danger">Видалити</button>
+                    </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+<!-- Модальне вікно для додавання користувача -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">Додати користувача</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm" action="{% url 'project_detail' pk=project.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="identifier" class="form-label">Електронна пошта або номер телефону</label>
+                        <input type="text" class="form-control" id="identifier" name="identifier">
+                    </div>
+                    <div class="mb-3">
+                        <label for="friends_user">Друзі</label>
+                        <div id="friends_user">
+                            {% for friend in request.user.friends.all %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="friends_user" value="{{ friend.id }}" id="friend_user_{{ friend.id }}">
+                                    <label class="form-check-label" for="friend_user_{{ friend.id }}">
+                                        {{ friend.first_name }} {{ friend.last_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="submit" class="btn btn-primary" form="addUserForm">Додати</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% for participant in participants %}
+<!-- Модальне вікно для підтвердження видалення учасника -->
+<div class="modal fade" id="deleteUserModal-{{ participant.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-dark" id="deleteUserModalLabel">Підтвердження видалення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark">
+                Ви впевнені, що хочете видалити користувача "{{ participant.first_name }} {{ participant.last_name }}" з проекту?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <form action="{% url 'project_detail' pk=project.id %}" method="POST" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="participant_id" value="{{ participant.id }}">
+                    <button type="submit" class="btn btn-danger">Видалити</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+{% for task in tasks %}
+<div class="modal fade" id="deleteTaskModal-{{ task.id }}" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">Підтвердження видалення</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+            </div>
+            <div class="modal-body">
+                Ви впевнені, що хочете видалити завдання "{{ task.title }}"?
+            </div>
+            <div class="modal-footer">
+                <form method="post" action="{% url 'project_detail' task.project.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="task_id" value="{{ task.id }}">
+                    <button type="submit" name="delete_task" class="btn btn-danger">Видалити завдання</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+{% endblock %}
+

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Профіль користувача
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Профіль користувача</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Інформація про користувача</h3>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">Логін:</dt>
+                            <dd class="col-sm-9">{{ user.email }}</dd>
+                            <dt class="col-sm-3">Ім'я:</dt>
+                            <dd class="col-sm-9">{{ user.first_name }}</dd>
+                            <dt class="col-sm-3">Прізвище:</dt>
+                            <dd class="col-sm-9">{{ user.last_name }}</dd>
+                            <dt class="col-sm-3">Номер телефону:</dt>
+                            <dd class="col-sm-9">{{ user.phone_number }}</dd>
+                            <dt class="col-sm-3">Країна:</dt>
+                            <dd class="col-sm-9">{{ user.country }}</dd>
+                            <dt class="col-sm-3">Дата реєстрації:</dt>
+                            <dd class="col-sm-9">{{ user.date_joined }}</dd>
+                        </dl>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="{% url 'logout' %}" class="btn btn-warning">Вихід</a>
+                        <a href="{% url 'edit_profile' %}" class="btn btn-primary">Редагування</a>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">Видалення</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно підтвердження видалення -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Підтвердження видалення</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Ви впевнені, що хочете видалити свій профіль? Це дія є незворотною.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <form action="{% url 'delete_profile' %}" method="post" id="deleteForm">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Видалити</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

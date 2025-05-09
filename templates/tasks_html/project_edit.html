@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Редагування проекту
+{% endblock %}
+
+{% block body %}
+<div class="container">
+  <main>
+    <div class="py-5 text-center">
+      <h2>Редагування проекту</h2>
+      <p class="lead">Заповніть форму для редагування проекту</p>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-8">
+        <form id="editProjectForm" method="POST" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label for="{{ form.title.id_for_label }}" class="form-label">Назва проекту</label>
+            <input type="text" name="title" id="{{ form.title.id_for_label }}" class="form-control" placeholder="Введіть назву проекту" value="{{ form.title.value|default:'' }}">
+            <div class="text-danger">
+              {{ form.title.errors }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.description.id_for_label }}" class="form-label">Опис проекту</label>
+            <textarea name="description" id="{{ form.description.id_for_label }}" class="form-control" placeholder="Введіть опис проекту">{{ form.description.value|default:'' }}</textarea>
+            <div class="text-danger">
+              {{ form.description.errors }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.image.id_for_label }}" class="form-label">Зображення проекту (опціонально)</label>
+            <input type="file" name="image" id="{{ form.image.id_for_label }}" class="form-control">
+            <small class="form-text text-muted">Ви можете редагувати проект без зображення.</small>
+            <div class="text-danger">
+              {{ form.image.errors }}
+            </div>
+          </div>
+
+          <button type="button" class="w-100 btn btn-create btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal">Зберегти зміни</button>
+          <a href="{% url 'project_detail' pk=project.id %}" class="w-100 btn btn-secondary btn-lg mt-2">Скасувати</a>
+        </form>
+
+        <!-- Модальне вікно підтвердження -->
+        <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Підтвердження збереження</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                Ви впевнені, що хочете зберегти зміни?
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-create" id="confirmSave">Підтвердити</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<style>
+  .form-control {
+    border-radius: 25px; /* Зробити поля овальними */
+  }
+  .btn-create {
+    background-color: #28a745; /* Зелений колір для кнопки */
+    border-color: #28a745; /* Колір кордону кнопки */
+    transition: background-color 0.3s ease; /* Плавний перехід кольору фону */
+  }
+  .btn-create:hover {
+    background-color: #218838; /* Темніший зелений колір при наведенні */
+    border-color: #1e7e34; /* Темніший колір кордону при наведенні */
+    opacity: 1; /* Уникнути прозорості при наведенні */
+  }
+  .text-danger {
+    font-size: 0.875rem; /* Зменшити розмір тексту для помилок */
+  }
+</style>
+
+<script>
+  document.getElementById('confirmSave').addEventListener('click', function() {
+    document.getElementById('editProjectForm').submit();
+  });
+</script>
+{% endblock %}
